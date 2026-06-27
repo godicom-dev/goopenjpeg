@@ -6,6 +6,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(OPENJPEG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/openjpeg)
+set(OPENJPEG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/openjpeg-build)
+set(INTERFACE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/interface)
 
 set(BUILD_CODEC OFF CACHE BOOL "" FORCE)
 set(BUILD_JPIP OFF CACHE BOOL "" FORCE)
@@ -14,19 +16,9 @@ set(BUILD_JAVA OFF CACHE BOOL "" FORCE)
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 
-add_subdirectory(${OPENJPEG_DIR} ${CMAKE_CURRENT_BINARY_DIR}/openjpeg-build)
-
-set(INTERFACE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/interface)
+add_subdirectory(${OPENJPEG_DIR} ${OPENJPEG_BINARY_DIR})
 
 file(GLOB LCMS2_SOURCES ${OPENJPEG_DIR}/thirdparty/liblcms2/src/*.c)
-
-include_directories(
-    ${OPENJPEG_DIR}/src/lib/openjp2
-    ${CMAKE_CURRENT_BINARY_DIR}/openjpeg-build/src/lib/openjp2
-    ${OPENJPEG_DIR}/src/bin/common
-    ${OPENJPEG_DIR}/thirdparty/liblcms2/include
-    ${INTERFACE_DIR}
-)
 
 add_library(goopenjpeg SHARED
     ${INTERFACE_DIR}/memstream.c
@@ -36,6 +28,15 @@ add_library(goopenjpeg SHARED
     ${CMAKE_CURRENT_SOURCE_DIR}/capi/goopenjpeg.c
 )
 
+target_include_directories(goopenjpeg PRIVATE
+    ${OPENJPEG_DIR}/src/lib/openjp2
+    ${OPENJPEG_BINARY_DIR}/src/lib/openjp2
+    ${OPENJPEG_DIR}/src/bin/common
+    ${OPENJPEG_DIR}/thirdparty/liblcms2/include
+    ${INTERFACE_DIR}
+)
+
+add_dependencies(goopenjpeg openjp2)
 target_link_libraries(goopenjpeg PRIVATE openjp2)
 
 if(MSVC)

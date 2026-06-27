@@ -45,7 +45,7 @@ BSD license (see the main LICENSE file).
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <openjp2/openjpeg.h>
+#include <openjpeg.h>
 #include "color.h"
 #include "memstream.h"
 #include "j2k_decode.h"

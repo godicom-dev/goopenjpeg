@@ -1,7 +1,7 @@
 #ifndef GOOPENJPEG_J2K_DECODE_H
 #define GOOPENJPEG_J2K_DECODE_H
 
-#include <openjp2/openjpeg.h>
+#include <openjpeg.h>
 #include <stddef.h>
 
 typedef struct JPEG2000Parameters {

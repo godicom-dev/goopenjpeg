@@ -1,7 +1,7 @@
 #ifndef GOOPENJPEG_MEMSTREAM_H
 #define GOOPENJPEG_MEMSTREAM_H
 
-#include <openjp2/openjpeg.h>
+#include <openjpeg.h>
 #include <stddef.h>
 
 typedef struct memstream {
