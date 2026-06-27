@@ -1,0 +1,46 @@
+name: Build native library
+description: Build goopenjpeg shared library and copy to native/libs/
+
+inputs:
+  embed-name:
+    description: Output filename under native/libs/
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Windows - setup MSVC
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Windows - CMake configure + build
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        cmake -S lib -B lib/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        cmake --build lib/build --config Release
+        mkdir -p native/libs
+        cp lib/build/goopenjpeg.dll "native/libs/${{ inputs.embed-name }}"
+
+    - name: Unix - CMake configure + build
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        cmake -S lib -B lib/build_nix \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        cmake --build lib/build_nix --config Release
+
+    - name: Unix - copy (linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        mkdir -p native/libs
+        cp lib/build_nix/libgoopenjpeg.so "native/libs/${{ inputs.embed-name }}"
+
+    - name: Unix - copy (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        mkdir -p native/libs
+        cp lib/build_nix/libgoopenjpeg.dylib "native/libs/${{ inputs.embed-name }}"

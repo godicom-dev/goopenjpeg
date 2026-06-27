@@ -1,0 +1,17 @@
+# --- Go ---
+*.exe
+*.test
+*.out
+go.work
+go.work.sum
+vendor/
+
+# Build artifacts
+lib/build/
+lib/build_nix/
+lib/openjpeg/build/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

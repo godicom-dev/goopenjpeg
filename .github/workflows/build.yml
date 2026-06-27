@@ -1,0 +1,141 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-native:
+    name: build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-amd64
+            os: windows-latest
+            embed-name: goopenjpeg_amd64.dll
+          - name: linux-amd64
+            os: ubuntu-24.04
+            embed-name: goopenjpeg_linux_amd64.so
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            embed-name: goopenjpeg_linux_arm64.so
+          - name: darwin-arm64
+            os: macos-latest
+            embed-name: goopenjpeg_darwin_arm64.dylib
+
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build native library
+        uses: ./.github/actions/build-native
+        with:
+          embed-name: ${{ matrix.embed-name }}
+
+      - name: Upload native library
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.embed-name }}
+          path: native/libs/${{ matrix.embed-name }}
+
+  commit-native:
+    name: commit native/libs
+    needs: [build-native]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: "*"
+          merge-multiple: true
+
+      - name: Update native/libs
+        run: |
+          mkdir -p native/libs
+          cp artifacts/* native/libs/
+          ls -la native/libs/
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "ci: update prebuilt native libraries"
+          file_pattern: native/libs/*
+
+  test:
+    name: test (${{ matrix.name }})
+    needs: [build-native]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-amd64
+            os: windows-latest
+            embed-name: goopenjpeg_amd64.dll
+          - name: linux-amd64
+            os: ubuntu-24.04
+            embed-name: goopenjpeg_linux_amd64.so
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            embed-name: goopenjpeg_linux_arm64.so
+          - name: darwin-arm64
+            os: macos-latest
+            embed-name: goopenjpeg_darwin_arm64.dylib
+
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download native library
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.embed-name }}
+          path: native/libs
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: false
+
+      - name: Go test
+        run: go test -v ./...
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: "*"
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          makeLatest: true
