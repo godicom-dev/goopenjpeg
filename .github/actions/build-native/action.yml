@@ -13,39 +13,34 @@ runs:
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Windows - CMake configure + build
+    - name: Windows - build and copy
       if: runner.os == 'Windows'
       shell: bash
       run: |
+        set -euo pipefail
         cmake -S lib -B lib/build -G Ninja -DCMAKE_BUILD_TYPE=Release
-        cmake --build lib/build --config Release --target goopenjpeg
+        cmake --build lib/build --target goopenjpeg
+        test -f lib/build/goopenjpeg.dll
         mkdir -p native/libs
         cp lib/build/goopenjpeg.dll "native/libs/${{ inputs.embed-name }}"
+        ls -la "native/libs/${{ inputs.embed-name }}"
 
-    - name: Unix - CMake configure + build
+    - name: Unix - build and copy
       if: runner.os != 'Windows'
       shell: bash
       run: |
+        set -euo pipefail
         cmake -S lib -B lib/build_nix \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        cmake --build lib/build_nix --config Release --target goopenjpeg
-
-    - name: Unix - copy (linux)
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
+        cmake --build lib/build_nix --target goopenjpeg
         mkdir -p native/libs
-        lib="$(find lib/build_nix -name 'libgoopenjpeg.so' | head -1)"
-        test -n "$lib"
-        cp "$lib" "native/libs/${{ inputs.embed-name }}"
-
-    - name: Unix - copy (macOS)
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        mkdir -p native/libs
-        lib="$(find lib/build_nix -name 'libgoopenjpeg.dylib' | head -1)"
-        test -n "$lib"
-        cp "$lib" "native/libs/${{ inputs.embed-name }}"
+        if [ "${{ runner.os }}" = "Linux" ]; then
+          test -f lib/build_nix/libgoopenjpeg.so
+          cp lib/build_nix/libgoopenjpeg.so "native/libs/${{ inputs.embed-name }}"
+        else
+          test -f lib/build_nix/libgoopenjpeg.dylib
+          cp lib/build_nix/libgoopenjpeg.dylib "native/libs/${{ inputs.embed-name }}"
+        fi
+        ls -la "native/libs/${{ inputs.embed-name }}"
